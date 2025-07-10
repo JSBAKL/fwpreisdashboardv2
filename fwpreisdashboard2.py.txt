@@ -1,0 +1,69 @@
+import streamlit as st
+
+# --- Passwortschutz ---
+PASSWORT = "fernwaerme2025"
+pass_eingabe = st.text_input("🔒 Bitte Passwort eingeben:", type="password")
+
+if pass_eingabe != PASSWORT:
+    st.warning("Zugriff verweigert. Bitte gültiges Passwort eingeben.")
+    st.stop()
+
+# --- Titel ---
+st.title("💡 Fernwärmekostenberechnung pro Jahr")
+
+# --- Konstante Preise ---
+ENERGIEPREIS_CENT_PRO_KWH = 8.0469     # in Cent
+GRUNDPREIS_EURO_PRO_KW_JAHR = 42.9324  # in Euro
+WAERMEZAEHLER_MONATLICH = 2.8414       # Euro pro Monat (netto)
+OEKO_UMWELT_CENT_PRO_KWH = 0.1624      # in Cent pro kWh
+
+# --- Funktion zur Berechnung der Messleistungskosten ---
+def berechne_messleistungskosten(anschlussleistung_kw):
+    if anschlussleistung_kw <= 105:
+        return 8.8986 * 12
+    elif anschlussleistung_kw <= 245:
+        return 17.1616 * 12
+    elif anschlussleistung_kw <= 420:
+        return 21.6109 * 12
+    elif anschlussleistung_kw <= 1050:
+        return 26.0602 * 12
+    elif anschlussleistung_kw <= 1750:
+        return 28.6027 * 12
+    else:
+        return 28.6027 * 12
+
+# --- Benutzereingabe ---
+anschlussleistung_kw = st.number_input("🔌 Anschlussleistung (kW):", min_value=0.0, format="%.2f")
+verbrauch_kwh = st.number_input("🔥 Jahresverbrauch (kWh):", min_value=0.0, format="%.2f")
+
+if anschlussleistung_kw > 0 and verbrauch_kwh > 0:
+    # Einzelkosten berechnen
+    energiekosten = verbrauch_kwh * (ENERGIEPREIS_CENT_PRO_KWH / 100)
+    grundkosten = anschlussleistung_kw * GRUNDPREIS_EURO_PRO_KW_JAHR
+    messleistungskosten = berechne_messleistungskosten(anschlussleistung_kw)
+    waermezaehler_kosten = WAERMEZAEHLER_MONATLICH * 12
+
+    # Zwischensumme netto
+    zwischensumme = energiekosten + grundkosten + messleistungskosten + waermezaehler_kosten
+
+    # Abgaben
+    oekobeitrag = verbrauch_kwh * (OEKO_UMWELT_CENT_PRO_KWH / 100)
+    benutzungsabgabe = (zwischensumme + oekobeitrag) * 0.06
+    netto_gesamt = zwischensumme + oekobeitrag + benutzungsabgabe
+    mehrwertsteuer = netto_gesamt * 0.20
+    brutto_gesamt = netto_gesamt + mehrwertsteuer
+
+    # --- Ausgabe ---
+    st.subheader("📊 Kostenaufstellung Fernwärme")
+    st.write(f"Energiekosten:                {energiekosten:10.2f} €")
+    st.write(f"Grundpreis:                   {grundkosten:10.2f} €")
+    st.write(f"Messleistungskosten:          {messleistungskosten:10.2f} €")
+    st.write(f"Wärmezählerkosten:            {waermezaehler_kosten:10.2f} €")
+    st.markdown("---")
+    st.write(f"Öko- und Umweltbeitrag:       {oekobeitrag:10.2f} €")
+    st.write(f"Benutzungsabgabe (6%):        {benutzungsabgabe:10.2f} €")
+    st.markdown("---")
+    st.write(f"**Gesamtkosten netto:**        {netto_gesamt:10.2f} €")
+    st.write(f"Mehrwertsteuer (20%):         {mehrwertsteuer:10.2f} €")
+    st.markdown("---")
+    st.success(f"**Gesamtkosten (brutto):       {brutto_gesamt:10.2f} € / Jahr**")
